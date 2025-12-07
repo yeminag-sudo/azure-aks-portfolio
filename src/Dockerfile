@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy requirements and install
 COPY requirements.txt .
-pip install -r requirements.txt
+RUN pip install -r requirements.txt  # <--- FIXED: Added 'RUN' here
 
 # Copy application code
 COPY app.py .
@@ -16,3 +16,4 @@ EXPOSE 80
 
 # Run the application
 CMD ["python", "app.py"]
+
