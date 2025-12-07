@@ -1,0 +1,59 @@
+name: Build and Deploy to AKS
+
+on:
+  push:
+    branches:
+      - main  # Trigger only when code is pushed to main branch
+
+env:
+  RESOURCE_GROUP: "rg-aks-prod"        # The RG we created with Terraform
+  CLUSTER_NAME: "prod-aks-cluster"     # The Cluster we created with Terraform
+  ACR_NAME: ${{ secrets.ACR_NAME }}    # Pulled from GitHub Secrets
+
+jobs:
+  # JOB 1: BUILD THE IMAGE
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to ACR
+      run: az acr login --name ${{ env.ACR_NAME }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v2
+      with:
+        context: ./src
+        push: true
+        tags: ${{ env.ACR_NAME }}.azurecr.io/python-web-app:${{ github.sha }}
+
+  # JOB 2: DEPLOY TO KUBERNETES
+  deploy:
+    needs: build  # Wait for build to finish
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get AKS Credentials
+      run: az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CLUSTER_NAME }} --overwrite-existing
+
+    - name: Replace Image Tag in Manifest
+      # This swaps {{IMAGE_NAME}} with the real image we just built
+      run: |
+        sed -i "s|{{IMAGE_NAME}}|${{ env.ACR_NAME }}.azurecr.io/python-web-app:${{ github.sha }}|g" k8s/deployment.yaml
+
+    - name: Deploy to AKS
+      run: kubectl apply -f k8s/deployment.yaml
+      

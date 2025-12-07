@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-web-app
+spec:
+  replicas: 2  # We want 2 copies to demonstrate Load Balancing
+  selector:
+    matchLabels:
+      app: python-web
+  template:
+    metadata:
+      labels:
+        app: python-web
+    spec:
+      containers:
+      - name: python-web
+        image: {{IMAGE_NAME}}  # Pipeline will fill this in
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: python-web-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: python-web
+  ports:
+  - port: 80
+    targetPort: 80
+    
