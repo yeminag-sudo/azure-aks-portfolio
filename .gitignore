@@ -1,0 +1,21 @@
+# .gitignore
+
+# Terraform temporary files
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+*.tfvars
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets (Just in case)
+*.pem
+*.key
+creds.json
